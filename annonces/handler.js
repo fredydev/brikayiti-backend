@@ -2,7 +2,7 @@
 const AWS = require('aws-sdk');
 const uuid = require ("uuid")
 const db = new AWS.DynamoDB.DocumentClient({ apiVersion: '2012-08-10' });
-
+const { Table, Entity } = require('dynamodb-toolbox')
 // https://www.serverless.com/blog/node-rest-api-with-serverless-lambda-and-dynamodb
 
 
@@ -66,89 +66,90 @@ module.exports.createAnnonces = async (event, context, callback) => {
 };
 
 
+const multiplevalue = (data,queryStrings,attr) => {
+  let filters = [...data]
+  let modelTab = queryStrings[attr].split(",");
+   if(modelTab.length>1){
+     let ssFilter = [{attr:`properties.${attr}`,eq:modelTab[0]}]
+     for(let i=1;i<modelTab.length;i++){
+       let el = { or: true, attr: `properties.${attr}`, eq: modelTab[i] }
+       ssFilter = [...ssFilter,el]
+     }
+     filters = [...filters,ssFilter]
+   }
+   else{
+     filters = [...filters,{attr: `properties.${attr}`,eq: modelTab[0]}]
+   } 
+  return filters
+}
+  const rangeValue = (data,queryStrings,attr) => {
+    let index = queryStrings.price.indexOf("-");
+    let min = Number(queryStrings.price.slice(0,index))
+    let max = Number(queryStrings.price.slice(index+1))
+    let filters = [...data,{attr:`properties.${attr}`,between:[min,max]}]
+    return filters
+  }
 module.exports.getAnnonces = async (event, context, callback) => {
   const queryStrings=event.queryStringParameters
   console.log(queryStrings)
   if(queryStrings){
     let filterEx = ''
     let expAttVal = {}
-    
+    let filters =  [ ]
     if("price" in queryStrings){
-      let index = queryStrings.price.indexOf("-");
-      let min = queryStrings.price.slice(0,index)
-      let max = queryStrings.price.slice(index+1)
-       expAttVal = { ":min_val": Number(min),
-       ":max_val": Number(max)}
-      filterEx = 'prix >= :min_val and prix <= :max_val'
+        filters = rangeValue(filters,queryStrings,"price")
     }
+    if("annee" in queryStrings){
+      filters = rangeValue(filters,queryStrings,"annee")
+    }
+    if("mileage" in queryStrings){
+      filters = rangeValue(filters,queryStrings,"mileage")
+    }
+    if("surface_habitable" in queryStrings){
+      filters = rangeValue(filters,queryStrings,"surface_habitable")
+  }
+  if("pieces" in queryStrings){
+    filters = rangeValue(filters,queryStrings,"pieces")
+  }
+
     if("category" in queryStrings){
-      if(filterEx.length>0){
-        filterEx = filterEx+" and"+' category.sub_category.slug = :subcategory_val'
-        expAttVal[":subcategory_val"] =  queryStrings.subcat
-      }
-      else{
-        filterEx = 'category.sub_category.slug = :subcategory_val'
-        expAttVal = {":subcategory_val": queryStrings.subcat}
-      }
+      filters = [...filters,{attr: "category",eq: queryStrings.category}]
     }
-    if("cat" in queryStrings){
-      if(filterEx.length>0){
-        filterEx = filterEx+" and"+' category.slug = :category_val'
-        expAttVal[":category_val"] =  queryStrings.cat
-      }
-      else{
-        filterEx = 'category.slug = :category_val'
-        expAttVal = {":category_val": queryStrings.cat}
-      }
+    if("gearbox" in queryStrings){
+      filters = [...filters,{attr: "gearbox",eq: queryStrings.gearbox}]
     }
     if("commune" in queryStrings){
-      if(filterEx.length>0){
-        filterEx = filterEx+" and"+' localisation.commune = :commune_val'
-        expAttVal[":commune_val"] = queryStrings.comm
-      }
-      else{
-        filterEx = 'localisation.commune = :commune_val'
-        expAttVal = {":commune_val": queryStrings.comm}
-      }
-      
+      filters = [...filters,{attr: "localisation.commune",eq: queryStrings.commune}]
     }
     if("departement" in queryStrings){
-      if(filterEx.length>0){
-        filterEx = filterEx+" and"+ ' localisation.departement = :dept_val'
-        expAttVal[":dept_val"] = queryStrings.dept
-      }
-      else{
-        filterEx = 'localisation.departement = :dept_val'
-        expAttVal = {":dept_val": queryStrings.dept}
-      }
       
+      filters = [...filters,{attr: "localisation.departement",eq: queryStrings.departement}]
+    }
+    if("arrondissement" in queryStrings){
+      
+      filters = [...filters,{attr: "localisation.arrondissement",eq: queryStrings.arrondissement}]
     }
     if("marque" in queryStrings){
-      if(filterEx.length>0){
-        filterEx = filterEx+" and"+ ' properties.marque.valeur = :marq_val'
-        expAttVal[":marq_val"] = queryStrings.marque
-      }
-      else{
-        filterEx = 'properties.marque.valeur = :marq_val'
-        expAttVal = {":marq_val": queryStrings.marque}
-      }
-      
+      filters = [...filters,{attr: "properties.marque",eq: queryStrings.marque}]
     }
     if("modele" in queryStrings){
-      // let modelTab = queryStrings.modele.split(",");
-      
-      // let min = queryStrings.price.slice(0,index)
-      // let max = queryStrings.price.slice(index+1)
-      if(filterEx.length>0){
-        filterEx = filterEx+" and"+ ' properties.modele.valeur = :modele_val'
-        expAttVal[":modele_val"] = queryStrings.modele
-      }
-      else{
-        filterEx = 'properties.modele.valeur = :modele_val'
-        expAttVal = {":modele_val": queryStrings.modele}
-      }
-      
+      filters = multiplevalue(filters,queryStrings,"modele",)
     }
+    if("color" in queryStrings){
+      filters = multiplevalue(filters,queryStrings,"color",)   
+    }
+    if("vehicle_type" in queryStrings){
+     filters = multiplevalue(filters,queryStrings,"vehicle_type",)    
+    }
+    if("seats" in queryStrings){
+      filters = multiplevalue(filters,queryStrings,"seats",)    
+     }
+     if("doors" in queryStrings){
+      filters = multiplevalue(filters,queryStrings,"doors",)    
+     }
+     if("fuel" in queryStrings){
+      filters = multiplevalue(filters,queryStrings,"fuel",)    
+     }
     console.log(filterEx)
     console.log(expAttVal)
     let params = {        

@@ -1,5 +1,6 @@
 {
   "dependencies": {
+    "dynamodb-toolbox": "^0.3.3",
     "uuid": "^8.3.2"
   }
 }

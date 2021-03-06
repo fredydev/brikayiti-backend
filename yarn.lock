@@ -2,6 +2,11 @@
 # yarn lockfile v1
 
 
+dynamodb-toolbox@^0.3.3:
+  version "0.3.3"
+  resolved "https://registry.yarnpkg.com/dynamodb-toolbox/-/dynamodb-toolbox-0.3.3.tgz#77343085813c053fa5e123c4a1332ff0e133d953"
+  integrity sha512-6kA+H5rve1OI38XTHbBa06kf+EIzEItxJW/3MoCqhi3YAXdk4uxPIbEu0f+xyd/s8fQRBF7i7ibJnICpDY6g2Q==
+
 uuid@^8.3.2:
   version "8.3.2"
   resolved "https://registry.yarnpkg.com/uuid/-/uuid-8.3.2.tgz#80d5b5ced271bb9af6c445f21a1a04c606cefbe2"
